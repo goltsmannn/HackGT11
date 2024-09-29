@@ -2,3 +2,11 @@ mediapipe
 PyQt5
 nb_helpers
 opencv-python
+scipy
+matplotlib
+fastdtw
+streamlit
+streamlit-webrtc
+opencv-python
+fastdtw
+numpy
