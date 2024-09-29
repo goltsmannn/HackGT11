@@ -13,10 +13,7 @@ dtw_distances = {}
 for body_angle in body_angles:
     weighted_series =  weighted_csv[body_angle].values.reshape(-1, 1)
     reference_series = reference_csv[body_angle].values.reshape(-1, 1)
-    # Compute the DTW distance between the two series
     distance, path = fastdtw(weighted_series, reference_series, dist=euclidean)
-
-    # Store the DTW distance
     dtw_distances[body_angle] = [distance]
     print(f'DTW distance for {body_angle}: {distance}')
 
