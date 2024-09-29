@@ -1,15 +1,12 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-import asyncio
 import csv
-from scipy.interpolate import interp1d
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
-# Helper function to compute angles
 def angle_between_points(p1, p2, p3):
     p1 = np.array(p1)
     p2 = np.array(p2)
@@ -24,14 +21,12 @@ def angle_between_points(p1, p2, p3):
     angle = np.arccos(cos_angle)
     return np.degrees(angle)
 
-# Detect if a squat has started based on the hip angle
 def detect_squat_start(body_coordinates):
     left_hip_angle = angle_between_points(
         body_coordinates["left_shoulder"], body_coordinates["left_hip"], body_coordinates["left_knee"]
     )
-    return left_hip_angle < 140  # Adjust threshold as needed
+    return left_hip_angle < 140
 
-# Extract necessary body coordinates for angle calculations
 def read_body_coordinates(landmarks):
     body_coordinates = {
         "left_shoulder": [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,
@@ -61,20 +56,19 @@ def read_body_coordinates(landmarks):
     }
     return body_coordinates
 
-# Record a set of squats and save to CSV
-async def record_squat_set(filename, mode='reference', num_reps=3):
+def record_squat_set(filename, mode='reference', num_reps=3):
     cap = cv2.VideoCapture(0)
     squat_in_progress = False
     squat_set_data = []
     rep_count = 0
+
     if not cap.isOpened():
         print("Error: Could not open camera.")
-        cap.release()
-        cv2.destroyAllWindows()
         return
+
     while cap.isOpened():
         _, frame = cap.read()
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if frame is None:
             break
 
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -86,18 +80,16 @@ async def record_squat_set(filename, mode='reference', num_reps=3):
             if landmarks:
                 body_coordinates = read_body_coordinates(landmarks)
 
-                # Collect angles and store them
                 angles = {
                     'left_hip_angle': angle_between_points(body_coordinates["left_shoulder"], body_coordinates["left_hip"], body_coordinates["left_knee"]),
                     'right_hip_angle': angle_between_points(body_coordinates["right_shoulder"], body_coordinates["right_hip"], body_coordinates["right_knee"]),
                     'left_knee_angle': angle_between_points(body_coordinates["left_hip"], body_coordinates["left_knee"], body_coordinates["left_ankle"]),
-                    'right_knee_angle': angle_between_points(body_coordinates["right_hip"], body_coordinates["right_knee"], body_coordinates["right_ankle"]),
-                    # Add more angles if needed
+                    'right_knee_angle': angle_between_points(body_coordinates["right_hip"], body_coordinates["right_knee"], body_coordinates["right_ankle"])
                 }
 
                 if detect_squat_start(body_coordinates) and not squat_in_progress:
                     squat_in_progress = True
-                    rep_data = []  # Store frames of the current rep
+                    rep_data = []
                     print(f"Squat {rep_count + 1} started.")
 
                 if squat_in_progress:
@@ -115,6 +107,8 @@ async def record_squat_set(filename, mode='reference', num_reps=3):
             print(f"Error: {e}")
 
         cv2.imshow('Squat Recording', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
     cap.release()
     cv2.destroyAllWindows()
@@ -122,7 +116,6 @@ async def record_squat_set(filename, mode='reference', num_reps=3):
     # Save to CSV
     with open(filename, 'w', newline='') as file:
         writer = csv.writer(file)
-        # Write headers
         headers = ['frame_idx', 'left_hip_angle', 'right_hip_angle', 'left_knee_angle', 'right_knee_angle']
         writer.writerow(headers)
         for rep_idx, rep_data in enumerate(squat_set_data):

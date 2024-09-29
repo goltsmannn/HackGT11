@@ -1,21 +1,18 @@
 import tkinter as tk
 from tkinter import messagebox
 import threading
-import asyncio  # Import asyncio to use with async functions
 import record_squats
 import data_analysis
 
 def start_reference_recording():
     def run_recording():
-        # Use asyncio.run() to call the async function
-        asyncio.run(record_squats.record_squat_set('reference.csv', mode='reference', num_reps=3))
+        record_squats.record_squat_set('reference.csv', mode='reference', num_reps=3)
         messagebox.showinfo("Info", "Reference squats recorded.")
     threading.Thread(target=run_recording).start()
 
 def start_weighted_recording():
     def run_recording():
-        # Use asyncio.run() to call the async function
-        asyncio.run(record_squats.record_squat_set('weighted.csv', mode='weighted', num_reps=3))
+        record_squats.record_squat_set('weighted.csv', mode='weighted', num_reps=3)
         messagebox.showinfo("Info", "Weighted squats recorded.")
     threading.Thread(target=run_recording).start()
 
