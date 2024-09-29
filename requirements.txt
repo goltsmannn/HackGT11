@@ -1,11 +1,12 @@
 mediapipe
 PyQt5
 nb_helpers
-opencv-python>=4.9
+opencv-python
 scipy
 matplotlib
 fastdtw
-streamlit>=1.30
-streamlit-webrtc>=0.47
-numpy>=1.26
-altair
+streamlit
+streamlit-webrtc
+opencv-python
+fastdtw
+numpy
