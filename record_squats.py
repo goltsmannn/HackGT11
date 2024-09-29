@@ -7,6 +7,28 @@ mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
+required_landmarks = [
+    mp_pose.PoseLandmark.LEFT_SHOULDER,
+    mp_pose.PoseLandmark.RIGHT_SHOULDER,
+    mp_pose.PoseLandmark.LEFT_HIP,
+    mp_pose.PoseLandmark.RIGHT_HIP,
+    mp_pose.PoseLandmark.LEFT_KNEE,
+    mp_pose.PoseLandmark.RIGHT_KNEE,
+    mp_pose.PoseLandmark.LEFT_ANKLE,
+    mp_pose.PoseLandmark.RIGHT_ANKLE,
+    mp_pose.PoseLandmark.LEFT_FOOT_INDEX,
+    mp_pose.PoseLandmark.RIGHT_FOOT_INDEX,
+]
+
+def all_landmarks_visible(landmarks):
+    """Check if all required landmarks are visible."""
+    if landmarks is None:
+        return False
+    for lm in required_landmarks:
+        if landmarks[lm.value].visibility < 0.5:  # Check visibility score
+            return False
+    return True
+
 def angle_between_points(p1, p2, p3):
     p1 = np.array(p1)
     p2 = np.array(p2)
@@ -25,7 +47,10 @@ def detect_squat_start(body_coordinates):
     left_hip_angle = angle_between_points(
         body_coordinates["left_shoulder"], body_coordinates["left_hip"], body_coordinates["left_knee"]
     )
-    return left_hip_angle < 140
+    right_hip_angle = angle_between_points(
+        body_coordinates["right_shoulder"], body_coordinates["right_hip"], body_coordinates["right_knee"]
+    )
+    return left_hip_angle < 140 and right_hip_angle < 140
 
 def read_body_coordinates(landmarks):
     body_coordinates = {
@@ -52,11 +77,23 @@ def read_body_coordinates(landmarks):
                        landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].z],
         "right_ankle": [landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x,
                         landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y,
-                        landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].z]
+                        landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].z],
+        "left_heel": [landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].x,
+                      landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].y,
+                      landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].z],
+        "right_heel": [landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x,
+                       landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y,
+                       landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].z],
+        "left_foot_index": [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,
+                            landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y,
+                            landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].z],
+        "right_foot_index": [landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,
+                             landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y,
+                             landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].z]
     }
     return body_coordinates
 
-def record_squat_set(filename, mode='reference', num_reps=3):
+def record_squat_set(filename, mode='reference', num_reps=5):
     cap = cv2.VideoCapture(0)
     squat_in_progress = False
     squat_set_data = []
@@ -80,14 +117,59 @@ def record_squat_set(filename, mode='reference', num_reps=3):
             if landmarks:
                 body_coordinates = read_body_coordinates(landmarks)
 
-                angles = {
-                    'left_hip_angle': angle_between_points(body_coordinates["left_shoulder"], body_coordinates["left_hip"], body_coordinates["left_knee"]),
-                    'right_hip_angle': angle_between_points(body_coordinates["right_shoulder"], body_coordinates["right_hip"], body_coordinates["right_knee"]),
-                    'left_knee_angle': angle_between_points(body_coordinates["left_hip"], body_coordinates["left_knee"], body_coordinates["left_ankle"]),
-                    'right_knee_angle': angle_between_points(body_coordinates["right_hip"], body_coordinates["right_knee"], body_coordinates["right_ankle"])
-                }
+                # Calculate angles, even if some landmarks might be missing
+                try:
+                    angles = {
+                        'left_hip_angle': angle_between_points(body_coordinates["left_shoulder"], body_coordinates["left_hip"], body_coordinates["left_knee"]),
+                        'right_hip_angle': angle_between_points(body_coordinates["right_shoulder"], body_coordinates["right_hip"], body_coordinates["right_knee"]),
+                        'left_knee_angle': angle_between_points(body_coordinates["left_hip"], body_coordinates["left_knee"], body_coordinates["left_ankle"]),
+                        'right_knee_angle': angle_between_points(body_coordinates["right_hip"], body_coordinates["right_knee"], body_coordinates["right_ankle"]),
+                        'left_shin_angle': angle_between_points(body_coordinates["left_knee"], body_coordinates["left_heel"], body_coordinates["left_foot_index"]),
+                        'right_shin_angle': angle_between_points(body_coordinates["right_knee"], body_coordinates["right_heel"], body_coordinates["right_foot_index"])
+                    }
+                except KeyError as e:
+                    print(f"Error: Missing landmark data for {e}")
+                    continue
 
-                if detect_squat_start(body_coordinates) and not squat_in_progress:
+                h, w, _ = frame.shape
+
+                # Display angles even if some landmarks are missing
+                try:
+                    # Display left hip angle
+                    left_hip_pos = (int(body_coordinates["left_hip"][0] * w), int(body_coordinates["left_hip"][1] * h))
+                    cv2.putText(frame, f'Hip: {angles["left_hip_angle"]:.2f}', left_hip_pos, 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
+
+                    # Display right hip angle
+                    right_hip_pos = (int(body_coordinates["right_hip"][0] * w), int(body_coordinates["right_hip"][1] * h))
+                    cv2.putText(frame, f'Hip: {angles["right_hip_angle"]:.2f}', right_hip_pos, 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
+
+                    # Display left knee angle
+                    left_knee_pos = (int(body_coordinates["left_knee"][0] * w), int(body_coordinates["left_knee"][1] * h))
+                    cv2.putText(frame, f'Knee: {angles["left_knee_angle"]:.2f}', left_knee_pos, 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2, cv2.LINE_AA)
+
+                    # Display right knee angle
+                    right_knee_pos = (int(body_coordinates["right_knee"][0] * w), int(body_coordinates["right_knee"][1] * h))
+                    cv2.putText(frame, f'Knee: {angles["right_knee_angle"]:.2f}', right_knee_pos, 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2, cv2.LINE_AA)
+
+                    # Display left shin angle
+                    left_foot_pos = (int(body_coordinates["left_foot_index"][0] * w), int(body_coordinates["left_foot_index"][1] * h))
+                    cv2.putText(frame, f'Shin: {angles["left_shin_angle"]:.2f}', left_foot_pos, 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
+
+                    # Display right shin angle
+                    right_foot_pos = (int(body_coordinates["right_foot_index"][0] * w), int(body_coordinates["right_foot_index"][1] * h))
+                    cv2.putText(frame, f'Shin: {angles["right_shin_angle"]:.2f}', right_foot_pos, 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
+
+                except KeyError as e:
+                    print(f"Error displaying angle: {e}")
+
+                # Only start recording if all required landmarks are visible
+                if all_landmarks_visible(landmarks) and detect_squat_start(body_coordinates) and not squat_in_progress:
                     squat_in_progress = True
                     rep_data = []
                     print(f"Squat {rep_count + 1} started.")
@@ -116,9 +198,10 @@ def record_squat_set(filename, mode='reference', num_reps=3):
     # Save to CSV
     with open(filename, 'w', newline='') as file:
         writer = csv.writer(file)
-        headers = ['frame_idx', 'left_hip_angle', 'right_hip_angle', 'left_knee_angle', 'right_knee_angle']
+        headers = ['frame_idx', 'left_hip_angle', 'right_hip_angle', 'left_knee_angle', 'right_knee_angle', 'left_shin_angle', 'right_shin_angle']
         writer.writerow(headers)
         for rep_idx, rep_data in enumerate(squat_set_data):
             for frame_idx, angles in enumerate(rep_data):
                 writer.writerow([frame_idx, angles['left_hip_angle'], angles['right_hip_angle'],
-                                 angles['left_knee_angle'], angles['right_knee_angle']])
+                                 angles['left_knee_angle'], angles['right_knee_angle'],
+                                 angles['left_shin_angle'], angles['right_shin_angle']])
