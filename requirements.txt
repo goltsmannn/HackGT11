@@ -2,3 +2,5 @@ mediapipe
 PyQt5
 nb_helpers
 opencv-python
+scipy
+matplotlib
