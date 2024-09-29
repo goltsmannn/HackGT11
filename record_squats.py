@@ -42,15 +42,17 @@ def all_landmarks_visible(landmarks):
             rightSide = False
 
     if rightSide and leftSide:
-        return Visibility.BOTH.value
+        return Visibility.LEFT.value
     elif leftSide:
         return Visibility.LEFT.value
     elif rightSide:
         return Visibility.RIGHT.value
-    else :
+    else:
         return Visibility.NONE.value
 
-def detect_squat_start(body_coordinates, squat_side=None):
+def detect_squat_start(body_coordinates, squat_side):
+    if not squat_side:
+        return False
     hip_angle = angle_between_points(
         body_coordinates[f"{squat_side}_shoulder"], body_coordinates[f"{squat_side}_hip"], body_coordinates[f"{squat_side}_knee"]
     )
@@ -99,7 +101,7 @@ def read_body_coordinates(landmarks):
     }
     return body_coordinates
 
-def record_squat_set(filename, num_reps=5):
+def record_squat_set(filename, num_reps=2):
     global squat_side
     cap = cv2.VideoCapture(0)
     squat_in_progress = False
@@ -124,7 +126,9 @@ def record_squat_set(filename, num_reps=5):
             # print(landmarks)
             if landmarks:
                 squat_flag, squat_side = all_landmarks_visible(landmarks) 
-                print(squat_side)
+                if squat_side:
+                    print(squat_side)
+
                 body_coordinates = read_body_coordinates(landmarks)
 
                 # Calculate angles, even if some landmarks might be missing
@@ -157,18 +161,21 @@ def record_squat_set(filename, num_reps=5):
                     cv2.putText(frame, f'Shin: {angles[f"{squat_side}_shin_angle"]:.2f}', foot_pos, 
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
 
+                    cv2.putText(frame, f'Squat side: {squat_side}', (10, 30),  # Adjusted coordinates
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
+
 
                 # Only start recording if all required landmarks are visible
                 rep_data = []
 
-                if all_landmarks_visible(landmarks) > 0 and detect_squat_start(body_coordinates) and not squat_in_progress:
+                if squat_flag > 0 and detect_squat_start(body_coordinates, squat_side) and not squat_in_progress:
                     squat_in_progress = True
                     print(f"Squat {rep_count + 1} started.")
 
                 if squat_in_progress:
                     rep_data.append(angles)
 
-                if not detect_squat_start(body_coordinates) and squat_in_progress:
+                if not detect_squat_start(body_coordinates, squat_side) and squat_in_progress:
                     squat_in_progress = False
                     squat_set_data.append(rep_data)
                     rep_count += 1

@@ -8,7 +8,6 @@ BODY_PARTS = [
 class Visibility(Enum):
     LEFT = (1, 'left')
     RIGHT = (2, 'right')
-    BOTH = (3, 'both')
     NONE = (0, False)
 
 def angle_between_points(p1, p2, p3):
