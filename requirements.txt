@@ -4,5 +4,8 @@ nb_helpers
 opencv-python
 scipy
 matplotlib
-streamlit
 fastdtw
+streamlit
+streamlit-webrtc
+opencv-python
+numpy
