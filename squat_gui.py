@@ -8,13 +8,13 @@ def start_reference_recording():
     def run_recording():
         record_squats.record_squat_set('reference.csv', mode='reference', num_reps=3)
         messagebox.showinfo("Info", "Reference squats recorded.")
-    threading.Thread(target=run_recording).start()
+    run_recording()
 
 def start_weighted_recording():
     def run_recording():
         record_squats.record_squat_set('weighted.csv', mode='weighted', num_reps=3)
         messagebox.showinfo("Info", "Weighted squats recorded.")
-    threading.Thread(target=run_recording).start()
+    run_recording()
 
 def view_analysis():
     data_analysis.analyze_squat_set('reference.csv', 'weighted.csv')
