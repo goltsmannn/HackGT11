@@ -16,14 +16,14 @@ if 'stream_started' not in st.session_state:
 if 'recording_type' not in st.session_state:
     st.session_state['recording_type'] = 'reference'
 
-def process(image):
-    return record_squat_set(f'{st.session_state["recording.type"]}.csv', image, num_reps=3)
+async def process(image):
+    return await record_squat_set(f'{st.session_state["recording.type"]}.csv', image, num_reps=3)
 
 class VideoProcessor:
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
         img = process(img)
-        return av.VideoFrame.from_ndarray(img, format="rgb")
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 
 

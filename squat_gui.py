@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import threading
 import record_squats
-#from data_analysis.comparing_graphs import compare_graphs
+from data_analysis.comparing_graphs import run_post_analysis
 
 def start_reference_recording():
     def record_reference_squats():
@@ -17,8 +17,7 @@ def start_weighted_recording():
     record_weighted_squats()
 
 def view_analysis():
-    pass
-    #compare_graphs()
+    run_post_analysis()
 
 # Setup the GUI
 root = tk.Tk()
