@@ -8,4 +8,5 @@ fastdtw
 streamlit
 streamlit-webrtc
 opencv-python
+fastdtw
 numpy
