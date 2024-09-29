@@ -1,71 +1,36 @@
 import tkinter as tk
 from tkinter import messagebox
-import asyncio
 import threading
-import time
-import squat_analysis  # Import the squat analysis module
+import record_squats
+import data_analysis
 
-# Global state to track whether a reference squat has been recorded
-reference_recorded = False
+def start_reference_recording():
+    def run_recording():
+        record_squats.record_squat_set('reference.csv', mode='reference', num_reps=3)
+        messagebox.showinfo("Info", "Reference squats recorded.")
+    threading.Thread(target=run_recording).start()
 
-# Function to run asyncio tasks in a separate thread to avoid freezing the GUI
-def run_asyncio_task(task, *args):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(task(*args))
+def start_weighted_recording():
+    def run_recording():
+        record_squats.record_squat_set('weighted.csv', mode='weighted', num_reps=3)
+        messagebox.showinfo("Info", "Weighted squats recorded.")
+    threading.Thread(target=run_recording).start()
 
-# Function to start reference squat recording
-def start_reference_squat():
-    def reference_task():
-        status_label.config(text="Recording reference squat... Get ready!")
-        countdown_timer(3)  # 3-second countdown
-        status_label.config(text="Recording in progress...")
-        run_asyncio_task(squat_analysis.main, 'reference')
-        global reference_recorded
-        reference_recorded = True
-        status_label.config(text="Reference squat recorded!")
-        weighted_button.config(state='normal')  # Enable the weighted squat button
+def view_analysis():
+    data_analysis.analyze_squat_set('reference.csv', 'weighted.csv')
 
-    # Start the recording in a separate thread
-    threading.Thread(target=reference_task).start()
-
-# Function to start weighted squat recording
-def start_weighted_squat():
-    if not reference_recorded:
-        messagebox.showerror("Error", "You must record a reference squat first!")
-        return
-
-    def weighted_task():
-        status_label.config(text="Recording weighted squat... Get ready!")
-        countdown_timer(3)  # 3-second countdown
-        status_label.config(text="Recording in progress...")
-        run_asyncio_task(squat_analysis.main, 'weighted')
-        status_label.config(text="Weighted squat recorded!")
-
-    # Start the recording in a separate thread
-    threading.Thread(target=weighted_task).start()
-
-# Countdown timer function to show a timer before starting squat recording
-def countdown_timer(seconds):
-    for i in range(seconds, 0, -1):
-        status_label.config(text=f"Starting in {i}...")
-        root.update()  # Ensure the GUI updates during the countdown
-        time.sleep(1)
-
-# Create the main application window
+# Setup the GUI
 root = tk.Tk()
 root.title("Squat Analysis")
-root.geometry("400x300")
+root.geometry("300x200")
 
-# Create UI elements
-reference_button = tk.Button(root, text="Start Reference Squat", command=start_reference_squat, width=25, height=2)
-reference_button.pack(pady=20)
+reference_button = tk.Button(root, text="Record Reference Squats", command=start_reference_recording)
+reference_button.pack(pady=10)
 
-weighted_button = tk.Button(root, text="Start Weighted Squat", command=start_weighted_squat, width=25, height=2, state='disabled')
-weighted_button.pack(pady=20)
+weighted_button = tk.Button(root, text="Record Weighted Squats", command=start_weighted_recording)
+weighted_button.pack(pady=10)
 
-status_label = tk.Label(root, text="Press a button to start.")
-status_label.pack(pady=20)
+analysis_button = tk.Button(root, text="View Analysis", command=view_analysis)
+analysis_button.pack(pady=10)
 
-# Run the GUI event loop
 root.mainloop()
