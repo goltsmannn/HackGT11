@@ -4,3 +4,4 @@ nb_helpers
 opencv-python
 scipy
 matplotlib
+streamlit

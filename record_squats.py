@@ -67,7 +67,11 @@ async def record_squat_set(filename, mode='reference', num_reps=3):
     squat_in_progress = False
     squat_set_data = []
     rep_count = 0
-
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
+        cap.release()
+        cv2.destroyAllWindows()
+        return
     while cap.isOpened():
         _, frame = cap.read()
         if cv2.waitKey(1) & 0xFF == ord('q'):
